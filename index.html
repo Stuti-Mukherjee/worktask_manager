@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal 7-Day Kanban & Analytics</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2f;
+            --panel-bg: #252538;
+            --card-bg: #2d2d44;
+            --text-color: #f5f5f5;
+            --text-muted: #a0a0b8;
+            --purple: #8a4fff;
+            --orange: #ff9f43;
+            --red: #ff5252;
+            --green: #33d9b2;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Tabs Navigation */
+        .nav-tabs {
+            display: flex;
+            background-color: #151522;
+            padding: 10px 10px 0 10px;
+            border-bottom: 1px solid #2d2d44;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            margin-right: 5px;
+        }
+
+        .tab-btn.active {
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border-bottom: 2px solid var(--green);
+        }
+
+        /* Content Areas */
+        .tab-content {
+            display: none;
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Kanban Layout */
+        #kanban-tab {
+            gap: 15px;
+            overflow-x: auto;
+            align-items: flex-start;
+        }
+
+        .column {
+            background-color: var(--panel-bg);
+            flex: 1;
+            min-width: 250px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        .column-header {
+            padding: 15px;
+            font-weight: bold;
+            font-size: 16px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            color: #fff;
+        }
+
+        .column-ready { background-color: var(--purple); }
+        .column-progress { background-color: var(--orange); }
+        .column-waiting { background-color: var(--red); }
+        .column-done { background-color: var(--green); }
+
+        .task-list {
+            padding: 10px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 100px;
+        }
+
+        /* Task Cards */
+        .task-card {
+            background-color: var(--card-bg);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            cursor: grab;
+            border-left: 4px solid transparent;
+        }
+        
+        .task-card.productive { border-left-color: var(--green); }
+        .task-card.non-productive { border-left-color: var(--red); }
+
+        .task-title { font-weight: 600; margin-bottom: 6px; }
+        .task-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; margin-bottom: 6px; }
+        .task-day { background: #3d3d5c; padding: 2px 6px; border-radius: 4px; }
+        .task-hours { background: #1e1e2f; padding: 2px 6px; border-radius: 4px; color: #fff; }
+        .task-note { font-size: 12px; color: #c0c0d0; font-style: italic; background: rgba(0,0,0,0.1); padding: 4px; border-radius: 4px; }
+
+        .card-actions { display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--text-muted); }
+        .action-btn:hover { color: #fff; }
+
+        /* Form Controls */
+        .input-panel {
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input, select, textarea {
+            background-color: var(--card-bg);
+            border: 1px solid #3d3d5c;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        button.primary-btn {
+            background-color: var(--purple);
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Dashboard Layout */
+        #dashboard-tab {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metrics-grid {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .metric-card {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            flex: 1;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tab Navigation Bar -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('kanban')">📋 Kanban Board</button>
+        <button class="tab-btn" onclick="switchTab('dashboard')">📊 Dashboard & Analytics</button>
+    </div>
+
+    <!-- KANBAN TAB CONTENT -->
+    <div id="kanban" class="tab-content active" style="flex-direction: column;">
+        
+        <!-- Task Input Form -->
+        <div class="input-panel">
+            <input type="text" id="task-title" placeholder="New Task Title..." style="flex: 2; min-width: 150px;">
+            <select id="task-day">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+            </select>
+            <select id="task-type">
+                <option value="productive">🚀 Productive</option>
+                <option value="non-productive">☕ Non-Productive</option>
+            </select>
+            <input type="number" id="task-hours" placeholder="Hours (e.g. 1.5)" step="0.5" style="width: 80px;">
+            <input type="text" id="task-note" placeholder="Annotation/Notes..." style="flex: 1; min-width: 120px;">
+            <button class="primary-btn" onclick="addTask()">+ Add Task</button>
+        </div>
+
+        <!-- Kanban Board Columns -->
+        <div id="kanban-tab" style="display: flex; flex: 1;">
+            <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'ready')">
+                <div class="column-header column-ready">Ready to start</div>
+                <div class="task-list" id="ready-list"></div>
+            </div>
+            <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'progress')">
+                <div class="column-header column-progress">In progress</div>
+                <div class="task-list" id="progress-list"></div>
+            </div>
+            <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'waiting')">
+                <div class="column-header column-waiting">Waiting / Blocked</div>
+                <div class="task-list" id="waiting-list"></div>
+            </div>
+            <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'done')">
+                <div class="column-header column-done">Done</div>
+                <div class="task-list" id="done-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD TAB CONTENT -->
+    <div id="dashboard" class="tab-content">
+        <div id="dashboard-tab" style="display: flex; width: 100%;">
+            <h2>Weekly Efficiency Overview</h2>
+            <div class="metrics-grid">
+                <div class="metric-card" style="border-top: 4px solid var(--green);">
+                    <div>Productive Hours (Completed)</div>
+                    <div class="metric-value" id="prod-hours" style="color: var(--green);">0 hrs</div>
+                </div>
+                <div class="metric-card" style="border-top: 4px solid var(--red);">
+                    <div>Non-Productive Hours</div>
+                    <div class="metric-value" id="non-prod-hours" style="color: var(--red);">0 hrs</div>
+                </div>
+                <div class="metric-card" style="border-top: 4px solid var(--purple);">
+                    <div>Focus Rating</div>
+                    <div class="metric-value" id="efficiency-ratio" style="color: var(--purple);">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Core Data Array (Saved automatically to your browser storage)
+        let tasks = JSON.parse(localStorage.getItem('myKanbanTasks')) || [];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            if(tabId === 'dashboard') {
+                calculateAnalytics();
+            }
+        }
+
+        function renderTasks() {
+            document.getElementById('ready-list').innerHTML = '';
+            document.getElementById('progress-list').innerHTML = '';
+            document.getElementById('waiting-list').innerHTML = '';
+            document.getElementById('done-list').innerHTML = '';
+
+            tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = `task-card ${task.type}`;
+                card.draggable = true;
+                card.ondragstart = (e) => drag(e, task.id);
+                
+                card.innerHTML = `
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-meta">
+                        <span class="task-day">${task.day}</span>
+                        <span class="task-hours">${task.hours} hrs</span>
+                    </div>
+                    ${task.note ? `<div class="task-note">${task.note}</div>` : ''}
+                    <div class="card-actions">
+                        <button class="action-btn" onclick="deleteTask(${task.id})">🗑️ Delete</button>
+                    </div>
+                `;
+
+                document.getElementById(`${task.status}-list`).appendChild(card);
+            });
+
+            localStorage.setItem('myKanbanTasks', JSON.stringify(tasks));
+        }
+
+        function addTask() {
+            const title = document.getElementById('task-title').value;
+            const day = document.getElementById('task-day').value;
+            const type = document.getElementById('task-type').value;
+            const hours = parseFloat(document.getElementById('task-hours').value) || 0;
+            const note = document.getElementById('task-note').value;
+
+            if (!title) return alert('Please enter a task title.');
+
+            const newTask = {
+                id: Date.now(),
+                title,
+                day,
+                type,
+                hours,
+                note,
+                status: 'ready'
+            };
+
+            tasks.push(newTask);
+            renderTasks();
+
+            // Clear Input Fields
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-hours').value = '';
+            document.getElementById('task-note').value = '';
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        // Drag and Drop Engine
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev, id) { ev.dataTransfer.setData("text", id); }
+        function drop(ev, targetStatus) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("text");
+            const task = tasks.find(t => t.id == id);
+            if (task) {
+                task.status = targetStatus;
+                renderTasks();
+            }
+        }
+
+        // Analytics Engine
+        function calculateAnalytics() {
+            let productiveDoneHours = 0;
+            let nonProductiveHours = 0;
+
+            tasks.forEach(task => {
+                if (task.type === 'productive' && task.status === 'done') {
+                    productiveDoneHours += task.hours;
+                } else if (task.type === 'non-productive') {
+                    nonProductiveHours += task.hours;
+                }
+            });
+
+            const total = productiveDoneHours + nonProductiveHours;
+            const ratio = total > 0 ? Math.round((productiveDoneHours / total) * 100) : 0;
+
+            document.getElementById('prod-hours').innerText = `${productiveDoneHours} hrs`;
+            document.getElementById('non-prod-hours').innerText = `${nonProductiveHours} hrs`;
+            document.getElementById('efficiency-ratio').innerText = `${ratio}%`;
+        }
+
+        // Initial Load
+        renderTasks();
+    </script>
+</body>
+</html>
+
