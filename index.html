@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal 7-Day Grid Task Manager</title>
+
+    <!-- ========================================== -->
+    <!-- 1. CSS STYLING ENGINE (Locked & Fixed)     -->
+    <!-- ========================================== -->
     <style>
         :root {
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f3ef;        
             --panel-bg: #ffffff;
-            --text-color: #2d3748;
+            --text-color: #333333;
             --text-muted: #718096;
             --border-color: #e2e8f0;
             
-            /* Exact Pastel Palette from image_ad6f27.png */
-            --pastel-stuck: #F88378;   /* Soft Coral Red */
-            --pastel-ready: #FBCEB1;   /* Apricot / Peach */
-            --pastel-progress: #AFD9AE;/* Sage Green */
-            --pastel-done: #43B3AE;    /* Muted Teal */
+            /* Pastel Palette from image_ad6f27.png */
+            --pastel-stuck: #F88378;   
+            --pastel-ready: #FBCEB1;   
+            --pastel-progress: #AFD9AE;
+            --pastel-done: #43B3AE;    
             
             --purple-btn: #6c5ce7;
             --blue-category: #74b9ff;
@@ -34,7 +38,6 @@
             overflow: hidden;
         }
 
-        /* Tabs Navigation */
         .nav-tabs {
             display: flex;
             background-color: #ffffff;
@@ -59,7 +62,6 @@
             border-bottom-color: var(--purple-btn);
         }
 
-        /* Content Areas */
         .tab-content {
             display: none;
             flex: 1;
@@ -72,18 +74,48 @@
             flex-direction: column;
         }
 
-        /* Input Control Panel Bar */
         .input-panel {
             background-color: var(--panel-bg);
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: center;
             border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        /* Day Filtering Bar Styles */
+        .filter-strip {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .filter-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+        .filter-bubble {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+        .filter-bubble.active {
+            background-color: var(--purple-btn);
+            color: #fff;
+            border-color: var(--purple-btn);
         }
 
         input, select {
@@ -100,37 +132,6 @@
             outline: none;
         }
 
-        /* Timer UI Element */
-        .timer-container {
-            display: flex;
-            align-items: center;
-            background: #edf2f7;
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e0;
-            gap: 10px;
-        }
-        .timer-display {
-            font-family: monospace;
-            font-size: 14px;
-            color: #2d3748;
-            font-weight: bold;
-            min-width: 65px;
-        }
-        .timer-btn {
-            background: var(--purple-btn);
-            border: none;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .timer-btn.running {
-            background: var(--pastel-stuck);
-        }
-
         button.primary-btn {
             background-color: var(--purple-btn);
             color: #ffffff;
@@ -141,14 +142,12 @@
             font-weight: bold;
             font-size: 14px;
         }
-        button.primary-btn:hover { opacity: 0.9; }
 
-        /* Modern Spreadsheet Grid/Table Style */
         .table-container {
             background: var(--panel-bg);
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             overflow: hidden;
         }
 
@@ -160,7 +159,7 @@
         }
 
         .task-table th {
-            background-color: #f7fafc;
+            background-color: #f8fafc;
             color: var(--text-muted);
             font-weight: 600;
             padding: 12px 16px;
@@ -176,11 +175,8 @@
             vertical-align: middle;
         }
 
-        .task-table tr:hover {
-            background-color: #f8fafc;
-        }
+        .task-table tr:hover { background-color: #f8fafc; }
 
-        /* Dynamic Table Status Pill Selectors mapping image_ad6f27.png */
         .status-select, .type-select {
             border: none;
             font-weight: 600;
@@ -192,7 +188,6 @@
             text-align: center;
             text-align-last: center;
             appearance: none;
-            color: #fff;
         }
 
         .status-ready { background-color: var(--pastel-ready) !important; color: #5f3e26 !important; }
@@ -209,9 +204,41 @@
             cursor: pointer;
             padding: 4px;
             font-weight: 500;
-            color: var(--text-color);
         }
         .inline-input-day:hover { border-color: #cbd5e0; background: #fff; }
+
+        .inline-note-input {
+            border: 1px solid transparent;
+            background: transparent;
+            width: 100%;
+            padding: 6px;
+            font-style: italic;
+            box-sizing: border-box;
+            color: var(--text-color);
+        }
+        .inline-note-input:hover, .inline-note-input:focus {
+            border-color: #cbd5e0;
+            background: #fff;
+            font-style: normal;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .row-timer-btn {
+            background-color: #edf2f7;
+            border: 1px solid #cbd5e0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 6px;
+        }
+        .row-timer-btn.running {
+            background-color: var(--pastel-stuck);
+            color: white;
+            border-color: var(--pastel-stuck);
+        }
 
         .delete-btn {
             background: none;
@@ -221,7 +248,6 @@
             font-size: 14px;
         }
 
-        /* Dashboard Metrics */
         .metrics-grid { display: flex; gap: 20px; margin-top: 10px; }
         .metric-card {
             background-color: var(--panel-bg);
@@ -229,7 +255,7 @@
             border-radius: 8px;
             flex: 1;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             border: 1px solid var(--border-color);
         }
         .metric-value { font-size: 36px; font-weight: 700; margin-top: 12px; }
@@ -237,16 +263,17 @@
 </head>
 <body>
 
-    <!-- Tab Navigation Bar -->
+    <!-- ========================================== -->
+    <!-- 2. HTML STRUCTURE CONTENT (The Wireframe)  -->
+    <!-- ========================================== -->
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('grid-view')">📋 Tasks Grid</button>
         <button class="tab-btn" onclick="switchTab('dashboard-view')">📊 Dashboard & Analytics</button>
     </div>
 
-    <!-- MAIN GRID CONTAINER -->
     <div id="grid-view" class="tab-content active">
         
-        <!-- Action Entry Panel -->
+        <!-- Input Form Strip -->
         <div class="input-panel">
             <input type="text" id="task-title" placeholder="+ Add task title..." style="flex: 2; min-width: 200px;">
             
@@ -264,121 +291,164 @@
                 <option value="productive">🚀 Productive</option>
                 <option value="non-productive">☕ Non-Productive</option>
             </select>
-
-            <!-- Stopwatch Component Module -->
-            <div class="timer-container">
-                <span class="timer-display" id="live-clock">00:00:00</span>
-                <button type="button" class="timer-btn" id="toggle-timer-btn" onclick="toggleTimer()">Start</button>
-            </div>
             
-            <input type="number" id="task-hours" placeholder="Hrs" step="0.01" style="width: 70px;">
+            <input type="number" id="task-minutes" placeholder="Mins" step="1" style="width: 80px;">
             <input type="text" id="task-note" placeholder="Notes / Annotations..." style="flex: 1; min-width: 150px;">
             <button class="primary-btn" onclick="addTask()">Add Task</button>
         </div>
 
-        <!-- Spreadsheet Grid Table View -->
+        <!-- NEW: Day Filter Selection Ribbon -->
+        <div class="filter-strip">
+            <span class="filter-label">Filter Day:</span>
+            <button class="filter-bubble active" onclick="filterByDay('All')">All Tasks</button>
+            <button class="filter-bubble" onclick="filterByDay('Monday')">Mon</button>
+            <button class="filter-bubble" onclick="filterByDay('Tuesday')">Tue</button>
+            <button class="filter-bubble" onclick="filterByDay('Wednesday')">Wed</button>
+            <button class="filter-bubble" onclick="filterByDay('Thursday')">Thu</button>
+            <button class="filter-bubble" onclick="filterByDay('Friday')">Fri</button>
+            <button class="filter-bubble" onclick="filterByDay('Saturday')">Sat</button>
+            <button class="filter-bubble" onclick="filterByDay('Sunday')">Sun</button>
+        </div>
+
+        <!-- Spreadsheet Layout Grid -->
         <div class="table-container">
             <table class="task-table">
                 <thead>
                     <tr>
-                        <th style="width: 35%;">Task</th>
-                        <th style="width: 15%;">Day</th>
-                        <th style="width: 15%;">Status</th>
-                        <th style="width: 15%;">Category</th>
-                        <th style="width: 10%;">Hours</th>
-                        <th style="width: 25%;">Notes / Annotations</th>
+                        <th style="width: 30%;">Task</th>
+                        <th style="width: 12%;">Day</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 12%;">Category</th>
+                        <th style="width: 16%;">Tracked Time</th>
+                        <th style="width: 23%;">Notes / Annotations</th>
                         <th style="width: 5%; text-align: center;"></th>
                     </tr>
                 </thead>
-                <tbody id="table-body">
-                    <!-- Javascript populates data rows here dynamically -->
-                </tbody>
+                <tbody id="table-body"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ANALYTICS PANEL -->
     <div id="dashboard-view" class="tab-content">
-        <h2>Weekly Metrics</h2>
+        <h2>Weekly Performance Analytics</h2>
         <div class="metrics-grid">
             <div class="metric-card" style="border-top: 4px solid var(--pastel-done);">
-                <div style="color: var(--text-muted); font-weight: 600;">Production Hours (Done)</div>
-                <div class="metric-value" id="prod-hours" style="color: var(--pastel-done);">0.00 hrs</div>
+                <div style="color: var(--text-muted); font-weight: 600;">Production Focus (Done)</div>
+                <div class="metric-value" id="prod-hours">0 mins</div>
             </div>
             <div class="metric-card" style="border-top: 4px solid var(--pastel-stuck);">
-                <div style="color: var(--text-muted); font-weight: 600;">Non-Productive Hours</div>
-                <div class="metric-value" id="non-prod-hours" style="color: var(--pastel-stuck);">0.00 hrs</div>
+                <div style="color: var(--text-muted); font-weight: 600;">Non-Productive Buffer</div>
+                <div class="metric-value" id="non-prod-hours">0 mins</div>
             </div>
             <div class="metric-card" style="border-top: 4px solid var(--purple-btn);">
-                <div style="color: var(--text-muted); font-weight: 600;">Focus Rating Ratio</div>
-                <div class="metric-value" id="efficiency-ratio" style="color: var(--purple-btn);">0%</div>
+                <div style="color: var(--text-muted); font-weight: 600;">Focus Efficiency Percentage</div>
+                <div class="metric-value" id="efficiency-ratio">0%</div>
             </div>
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 3. APP JAVASCRIPT LOGIC (The Brains)       -->
+    <!-- ========================================== -->
     <script>
-        let tasks = JSON.parse(localStorage.getItem('myGridTasks')) || [];
-        
-        let timerInterval = null;
-        let totalSeconds = 0;
-        let isTimerRunning = false;
+        let tasks = [];
+        let activeTimerTaskId = null; 
+        let globalTimerInterval = null;
+        let selectedDayFilter = 'All'; // Track active filter perspective
 
-        function toggleTimer() {
-            const btn = document.getElementById('toggle-timer-btn');
-            const clockDisplay = document.getElementById('live-clock');
-            const hoursInput = document.getElementById('task-hours');
-
-            if (!isTimerRunning) {
-                isTimerRunning = true;
-                btn.innerText = "Stop";
-                btn.classList.add('running');
+        // --- NEW FEATURE: AUDIO NOTIFIER (POMODORO) ---
+        function playPomodoroChime() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
                 
-                timerInterval = setInterval(() => {
-                    totalSeconds++;
-                    let hrs = Math.floor(totalSeconds / 3600);
-                    let mins = Math.floor((totalSeconds % 3600) / 60);
-                    let secs = totalSeconds % 60;
-                    clockDisplay.innerText = 
-                        `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                }, 1000);
-            } else {
-                isTimerRunning = false;
-                btn.innerText = "Start";
-                btn.classList.remove('running');
-                clearInterval(timerInterval);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5 clean tone
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
                 
-                let calculatedHours = (totalSeconds / 3600).toFixed(2);
-                hoursInput.value = calculatedHours;
-                
-                totalSeconds = 0;
-                clockDisplay.innerText = "00:00:00";
-            }
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.4); // Chime lasts 0.4s
+            } catch(e) { console.log("Audio contexts blocked until interaction init."); }
         }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
-            
             if(tabId === 'dashboard-view') { calculateAnalytics(); }
+        }
+
+        // --- NEW FEATURE: DAY VIEW FILTERING ENGINE ---
+        function filterByDay(dayName) {
+            selectedDayFilter = dayName;
+            document.querySelectorAll('.filter-bubble').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText === dayName || (dayName === 'All' && btn.innerText === 'All Tasks')) {
+                    btn.classList.add('active');
+                }
+            });
+            renderGrid();
+        }
+
+        function toggleRowTimer(id) {
+            if (activeTimerTaskId !== null && activeTimerTaskId !== id) {
+                stopGlobalTimerInstance();
+            }
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            if (activeTimerTaskId === id) {
+                stopGlobalTimerInstance();
+            } else {
+                activeTimerTaskId = id;
+                task.status = 'progress'; 
+                
+                globalTimerInterval = setInterval(() => {
+                    task.secondsElapsed = (task.secondsElapsed || 0) + 1;
+                    task.minutes = parseFloat((task.secondsElapsed / 60).toFixed(2));
+                    
+                    // Trigger Pomodoro break notification alert every 25 minutes (1500 seconds)
+                    if (task.secondsElapsed % 1500 === 0) {
+                        playPomodoroChime();
+                    }
+                    saveAndSoftRefreshDisplay();
+                }, 1000);
+            }
+            saveAndSoftRefreshDisplay();
+        }
+
+        function stopGlobalTimerInstance() {
+            if (globalTimerInterval) { clearInterval(globalTimerInterval); globalTimerInterval = null; }
+            activeTimerTaskId = null;
         }
 
         function renderGrid() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            if (tasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No tasks mapped yet. Add one above!</td></tr>`;
+            // Apply filter layer dynamically
+            const displayedTasks = tasks.filter(t => selectedDayFilter === 'All' || t.day === selectedDayFilter);
+
+            if (displayedTasks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No records assigned to ${selectedDayFilter}.</td></tr>`;
                 return;
             }
 
-            tasks.forEach(task => {
+            displayedTasks.forEach(task => {
                 const row = document.createElement('tr');
+                const isRunning = (activeTimerTaskId === task.id);
                 
+                let currentSecs = task.secondsElapsed || 0;
+                let displayMins = Math.floor(currentSecs / 60);
+                let displaySecs = currentSecs % 60;
+                let timeTrackerString = `${displayMins}m ${displaySecs.toString().padStart(2, '0')}s`;
+
                 row.innerHTML = `
-                    <td style="font-weight: 500; color: #111;">${task.title}</td>
+                    <td style="font-weight: 600; color: #111;">${task.title}</td>
                     <td>
                         <select class="inline-input-day" onchange="updateInlineField(${task.id}, 'day', this.value)">
                             <option value="Monday" ${task.day === 'Monday'?'selected':''}>Monday</option>
@@ -404,30 +474,42 @@
                             <option value="non-productive" ${task.type === 'non-productive'?'selected':''}>☕ Non-Prod</option>
                         </select>
                     </td>
-                    <td style="font-family: monospace; font-weight: bold;">${task.hours.toFixed(2)}</td>
-                    <td style="color: var(--text-muted); font-style: italic;">${task.note || '—'}</td>
+                    <td>
+                        <div style="display: flex; align-items: center;">
+                            <button class="row-timer-btn ${isRunning ? 'running' : ''}" onclick="toggleRowTimer(${task.id})">
+                                ${isRunning ? '⏸ Pause' : '▶ Play'}
+                            </button>
+                            <span style="font-family: monospace; font-weight: bold; min-width: 65px;">${timeTrackerString}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="inline-note-input" value="${task.note || ''}" placeholder="Click to edit note..." onchange="updateInlineField(${task.id}, 'note', this.value)">
+                    </td>
                     <td style="text-align: center;"><button class="delete-btn" onclick="deleteTask(${task.id})">🗑️</button></td>
                 `;
                 tbody.appendChild(row);
             });
-
-            localStorage.setItem('myGridTasks', JSON.stringify(tasks));
         }
 
         function addTask() {
             const title = document.getElementById('task-title').value;
             const day = document.getElementById('task-day').value;
             const type = document.getElementById('task-type').value;
-            const hours = parseFloat(document.getElementById('task-hours').value) || 0;
+            const inputMinutes = parseFloat(document.getElementById('task-minutes').value) || 0;
             const note = document.getElementById('task-note').value;
 
-            if (!title) return alert('Provide a task description name.');
+            if (!title) return alert('Provide a task title.');
 
-            tasks.push({ id: Date.now(), title, day, type, hours, note, status: 'ready' });
-            renderGrid();
-
+            tasks.push({ 
+                id: Date.now(), title, day, type, 
+                minutes: inputMinutes, 
+                secondsElapsed: Math.round(inputMinutes * 60),
+                note, status: 'ready' 
+            });
+            
+            saveAndSoftRefreshDisplay();
             document.getElementById('task-title').value = '';
-            document.getElementById('task-hours').value = '';
+            document.getElementById('task-minutes').value = '';
             document.getElementById('task-note').value = '';
         }
 
@@ -435,36 +517,61 @@
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task[field] = value;
-                renderGrid();
+                saveAndSoftRefreshDisplay();
             }
         }
 
         function deleteTask(id) {
+            if (activeTimerTaskId === id) stopGlobalTimerInstance();
             tasks = tasks.filter(t => t.id !== id);
-            renderGrid();
+            saveAndSoftRefreshDisplay();
         }
 
         function calculateAnalytics() {
-            let productiveDoneHours = 0;
-            let nonProductiveHours = 0;
+            let productiveDoneMinutes = 0;
+            let nonProductiveMinutes = 0;
 
             tasks.forEach(task => {
+                let currentMinutes = task.secondsElapsed ? (task.secondsElapsed / 60) : (task.minutes || 0);
                 if (task.type === 'productive' && task.status === 'done') {
-                    productiveDoneHours += task.hours;
+                    productiveDoneMinutes += currentMinutes;
                 } else if (task.type === 'non-productive') {
-                    nonProductiveHours += task.hours;
+                    nonProductiveMinutes += currentMinutes;
                 }
             });
 
-            const total = productiveDoneHours + nonProductiveHours;
-            const ratio = total > 0 ? Math.round((productiveDoneHours / total) * 100) : 0;
+            const total = productiveDoneMinutes + nonProductiveMinutes;
+            const ratio = total > 0 ? Math.round((productiveDoneMinutes / total) * 100) : 0;
 
-            document.getElementById('prod-hours').innerText = `${productiveDoneHours.toFixed(2)} hrs`;
-            document.getElementById('non-prod-hours').innerText = `${nonProductiveHours.toFixed(2)} hrs`;
+            document.getElementById('prod-hours').innerText = `${productiveDoneMinutes.toFixed(1)} mins`;
+            document.getElementById('non-prod-hours').innerText = `${nonProductiveMinutes.toFixed(1)} mins`;
             document.getElementById('efficiency-ratio').innerText = `${ratio}%`;
         }
 
-        renderGrid();
+        // ==========================================
+        // 4. PERSISTENT CLOUD DATA ENGINE HOOK      
+        // ==========================================
+        function saveAndSoftRefreshDisplay() {
+            // Local fallback layer handler
+            localStorage.setItem('myGridTasks', JSON.stringify(tasks));
+            
+            /* 
+               FUTURE EXPANSION FOR CLOUD HOSTING:
+               fetch('https://your-database.supabase.co/rest/v1/tasks', {
+                   method: 'POST',
+                   headers: { 'Authorization': 'Bearer KEY', 'Content-Type': 'application/json' },
+                   body: JSON.stringify(tasks)
+               });
+            */
+            renderGrid();
+        }
+
+        function loadInitialData() {
+            tasks = JSON.parse(localStorage.getItem('myGridTasks')) || [];
+            renderGrid();
+        }
+
+        loadInitialData();
     </script>
 </body>
 </html>
