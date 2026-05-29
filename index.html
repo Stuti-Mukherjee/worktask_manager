@@ -6,6 +6,9 @@
     <title>Personal 7-Day Grid Task Manager</title>
     
     <link rel="stylesheet" href="style.css">
+
+    <!-- IMPORT SUPABASE OFFICIAL WEB CDN SCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -16,18 +19,12 @@
 
     <div id="grid-view" class="tab-content active">
         
+        <!-- Input Form Strip (Now using a Calendar Date Picker) -->
         <div class="input-panel">
             <input type="text" id="task-title" placeholder="+ Add task title..." style="flex: 2; min-width: 200px;">
             
-            <select id="task-day">
-                <option value="Monday">Monday</option>
-                <option value="Tuesday" selected>Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
-            </select>
+            <!-- Upgraded from static Day drop-down to Calendar Date Picker -->
+            <input type="date" id="task-date">
             
             <select id="task-type">
                 <option value="productive">🚀 Productive</option>
@@ -39,8 +36,12 @@
             <button class="primary-btn" onclick="addTask()">Add Task</button>
         </div>
 
+        <!-- Historical Week Selector Ribbon -->
         <div class="filter-strip">
-            <span class="filter-label">Filter Day:</span>
+            <span class="filter-label">📅 Historical Week Target:</span>
+            <input type="week" id="week-filter-picker" onchange="loadTasksFromCloud()">
+            
+            <span class="filter-label" style="margin-left:15px;">Filter Day:</span>
             <button class="filter-bubble active" onclick="filterByDay('All')">All Tasks</button>
             <button class="filter-bubble" onclick="filterByDay('Monday')">Mon</button>
             <button class="filter-bubble" onclick="filterByDay('Tuesday')">Tue</button>
@@ -56,7 +57,7 @@
                 <thead>
                     <tr>
                         <th style="width: 30%;">Task</th>
-                        <th style="width: 12%;">Day</th>
+                        <th style="width: 12%;">Date</th>
                         <th style="width: 12%;">Status</th>
                         <th style="width: 12%;">Category</th>
                         <th style="width: 16%;">Tracked Time</th>
@@ -71,7 +72,7 @@
 
     <div id="dashboard-view" class="tab-content">
         
-        <div class="dashboard-section-title">Base Weekly Performance Summary</div>
+        <div class="dashboard-section-title">Base Weekly Performance Summary (Selected Calendar Week)</div>
         <div class="metrics-grid">
             <div class="metric-card" style="border-top: 4px solid var(--pastel-done);">
                 <div style="color: var(--text-muted); font-weight: 600;">Production Focus (Done)</div>
@@ -93,7 +94,7 @@
             🔍 Single Day Focus Explorer: 
             <select id="analytics-day-select" onchange="calculateAnalytics()" style="margin-left: 10px; padding: 4px 10px;">
                 <option value="Monday">Monday</option>
-                <option value="Tuesday" selected>Tuesday</option>
+                <option value="Tuesday">Tuesday</option>
                 <option value="Wednesday">Wednesday</option>
                 <option value="Thursday">Thursday</option>
                 <option value="Friday">Friday</option>
@@ -119,11 +120,148 @@
     </div>
 
     <script>
+        // --- SECURE SUPABASE CONNECTIONS ---
+        const SUPABASE_URL = "https://rajkebsrgepopfjlgyoc.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_-mdi6wUQFMQL_C5qe6p1sw_MIUYgg-3"; // Your verified key string
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let tasks = [];
         let activeTimerTaskId = null; 
         let globalTimerInterval = null;
         let selectedDayFilter = 'All';
 
+        // Initialize defaults on loading
+        window.addEventListener('DOMContentLoaded', () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('task-date').value = todayStr;
+            document.getElementById('week-filter-picker').value = getYYYYWeekString(new Date());
+            
+            const daysArr = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const todayDayWord = daysArr[new Date().getDay()];
+            document.getElementById('analytics-day-select').value = todayDayWord;
+
+            loadTasksFromCloud();
+        });
+
+        // Date conversions to calendar mapping algorithms
+        function getYYYYWeekString(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return d.getUTCFullYear() + "-W" + weekNo.toString().padStart(2, '0');
+        }
+
+        function getDayOfWeekFromDateString(dateString) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const parts = dateString.split('-');
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            return days[d.getDay()];
+        }
+
+        function getStartAndEndOfWeekFromWeekString(weekStr) {
+            if(!weekStr) return { start: '', end: '' };
+            const parts = weekStr.split('-W');
+            const year = parseInt(parts[0]);
+            const week = parseInt(parts[1]);
+            const simple = new Date(year, 0, 1 + (week - 1) * 7);
+            const dow = simple.getDay();
+            const ISOweekStart = simple;
+            if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+            else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+            
+            const startStr = ISOweekStart.toISOString().split('T')[0];
+            const ISOweekEnd = new Date(ISOweekStart);
+            ISOweekEnd.setDate(ISOweekEnd.getDate() + 6);
+            const endStr = ISOweekEnd.toISOString().split('T')[0];
+            return { start: startStr, end: endStr };
+        }
+
+        // --- CLOUD CRUD CONTROLLERS ---
+        async function loadTasksFromCloud() {
+            stopGlobalTimerInstance();
+            const selectedWeek = document.getElementById('week-filter-picker').value;
+            const boundaries = getStartAndEndOfWeekFromWeekString(selectedWeek);
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .gte('task_date', boundaries.start)
+                .lte('task_date', boundaries.end)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error("Database read error:", error);
+                return;
+            }
+
+            tasks = data.map(t => ({
+                id: t.id,
+                title: t.title,
+                date: t.task_date,
+                day: getDayOfWeekFromDateString(t.task_date),
+                status: t.status,
+                type: t.type,
+                secondsElapsed: t.seconds_elapsed,
+                minutes: parseFloat((t.seconds_elapsed / 60).toFixed(2)),
+                note: t.note
+            }));
+
+            renderGrid();
+            calculateAnalytics();
+        }
+
+        async function addTask() {
+            const title = document.getElementById('task-title').value;
+            const task_date = document.getElementById('task-date').value;
+            const type = document.getElementById('task-type').value;
+            const inputMinutes = parseFloat(document.getElementById('task-minutes').value) || 0;
+            const note = document.getElementById('task-note').value;
+
+            if (!title || !task_date) return alert('Provide task title and select a date.');
+
+            const { error } = await supabase
+                .from('tasks')
+                .insert([{ 
+                    title, 
+                    task_date, 
+                    type, 
+                    seconds_elapsed: Math.round(inputMinutes * 60), 
+                    note, 
+                    status: 'ready' 
+                }]);
+
+            if (error) return alert("Failed writing records to database.");
+
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-minutes').value = '';
+            document.getElementById('task-note').value = '';
+            
+            loadTasksFromCloud();
+        }
+
+        async function updateInlineFieldOnCloud(id, updateObj) {
+            const { error } = await supabase
+                .from('tasks')
+                .update(updateObj)
+                .eq('id', id);
+            if (error) console.error("Database update patch mismatch:", error);
+        }
+
+        async function deleteTask(id) {
+            if (activeTimerTaskId === id) stopGlobalTimerInstance();
+            
+            const { error } = await supabase
+                .from('tasks')
+                .delete()
+                .eq('id', id);
+
+            if (error) return alert("Could not remove row from database.");
+            loadTasksFromCloud();
+        }
+
+        // --- APPLICATION UTILITIES ---
         function playPomodoroChime() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -162,22 +300,34 @@
 
             if (activeTimerTaskId === id) {
                 stopGlobalTimerInstance();
+                updateInlineFieldOnCloud(task.id, { seconds_elapsed: task.secondsElapsed });
             } else {
                 activeTimerTaskId = id;
                 task.status = 'progress'; 
+                updateInlineFieldOnCloud(task.id, { status: 'progress' });
                 
                 globalTimerInterval = setInterval(() => {
                     task.secondsElapsed = (task.secondsElapsed || 0) + 1;
                     task.minutes = parseFloat((task.secondsElapsed / 60).toFixed(2));
                     if (task.secondsElapsed % 1500 === 0) { playPomodoroChime(); }
-                    saveAndSoftRefreshDisplay();
+                    
+                    // Throttle saving active tracker updates once every 10 seconds
+                    if (task.secondsElapsed % 10 === 0) {
+                        updateInlineFieldOnCloud(task.id, { seconds_elapsed: task.secondsElapsed });
+                    }
+                    renderGrid();
                 }, 1000);
             }
-            saveAndSoftRefreshDisplay();
+            renderGrid();
         }
 
         function stopGlobalTimerInstance() {
-            if (globalTimerInterval) { clearInterval(globalTimerInterval); globalTimerInterval = null; }
+            if (globalTimerInterval) { 
+                clearInterval(globalTimerInterval); 
+                globalTimerInterval = null; 
+                const t = tasks.find(x => x.id === activeTimerTaskId);
+                if(t) updateInlineFieldOnCloud(t.id, { seconds_elapsed: t.secondsElapsed });
+            }
             activeTimerTaskId = null;
         }
 
@@ -187,7 +337,7 @@
             const displayedTasks = tasks.filter(t => selectedDayFilter === 'All' || t.day === selectedDayFilter);
 
             if (displayedTasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No records assigned to ${selectedDayFilter}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical records assigned to ${selectedDayFilter} for this calendar window selection.</td></tr>`;
                 return;
             }
 
@@ -202,18 +352,10 @@
                 row.innerHTML = `
                     <td style="font-weight: 600; color: #111;">${task.title}</td>
                     <td>
-                        <select class="inline-input-day" onchange="updateInlineField(${task.id}, 'day', this.value)">
-                            <option value="Monday" ${task.day === 'Monday'?'selected':''}>Monday</option>
-                            <option value="Tuesday" ${task.day === 'Tuesday'?'selected':''}>Tuesday</option>
-                            <option value="Wednesday" ${task.day === 'Wednesday'?'selected':''}>Wednesday</option>
-                            <option value="Thursday" ${task.day === 'Thursday'?'selected':''}>Thursday</option>
-                            <option value="Friday" ${task.day === 'Friday'?'selected':''}>Friday</option>
-                            <option value="Saturday" ${task.day === 'Saturday'?'selected':''}>Saturday</option>
-                            <option value="Sunday" ${task.day === 'Sunday'?'selected':''}>Sunday</option>
-                        </select>
+                        <input type="date" class="inline-input-day" value="${task.date}" onchange="updateTaskDateInline(${task.id}, this.value)">
                     </td>
                     <td>
-                        <select class="status-select status-${task.status}" onchange="updateInlineField(${task.id}, 'status', this.value)">
+                        <select class="status-select status-${task.status}" onchange="updateTaskFieldInline(${task.id}, 'status', this.value)">
                             <option value="ready" ${task.status === 'ready'?'selected':''}>Working on it</option>
                             <option value="progress" ${task.status === 'progress'?'selected':''}>In Progress</option>
                             <option value="waiting" ${task.status === 'waiting'?'selected':''}>Stuck</option>
@@ -221,7 +363,7 @@
                         </select>
                     </td>
                     <td>
-                        <select class="type-select type-${task.type.replace('-','')}" onchange="updateInlineField(${task.id}, 'type', this.value)">
+                        <select class="type-select type-${task.type.replace('-','')}" onchange="updateTaskFieldInline(${task.id}, 'type', this.value)">
                             <option value="productive" ${task.type === 'productive'?'selected':''}>🚀 Productive</option>
                             <option value="non-productive" ${task.type === 'non-productive'?'selected':''}>☕ Non-Prod</option>
                         </select>
@@ -235,7 +377,7 @@
                         </div>
                     </td>
                     <td>
-                        <input type="text" class="inline-note-input" value="${task.note || ''}" placeholder="Click to edit note..." onchange="updateInlineField(${task.id}, 'note', this.value)">
+                        <input type="text" class="inline-note-input" value="${task.note || ''}" placeholder="Click to edit note..." onchange="updateTaskFieldInline(${task.id}, 'note', this.value)">
                     </td>
                     <td style="text-align: center;"><button class="delete-btn" onclick="deleteTask(${task.id})">🗑️</button></td>
                 `;
@@ -243,40 +385,26 @@
             });
         }
 
-        function addTask() {
-            const title = document.getElementById('task-title').value;
-            const day = document.getElementById('task-day').value;
-            const type = document.getElementById('task-type').value;
-            const inputMinutes = parseFloat(document.getElementById('task-minutes').value) || 0;
-            const note = document.getElementById('task-note').value;
-
-            if (!title) return alert('Provide a task title.');
-
-            tasks.push({ 
-                id: Date.now(), title, day, type, 
-                minutes: inputMinutes, 
-                secondsElapsed: Math.round(inputMinutes * 60),
-                note, status: 'ready' 
-            });
-            
-            saveAndSoftRefreshDisplay();
-            document.getElementById('task-title').value = '';
-            document.getElementById('task-minutes').value = '';
-            document.getElementById('task-note').value = '';
-        }
-
-        function updateInlineField(id, field, value) {
+        function updateTaskFieldInline(id, field, value) {
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task[field] = value;
-                saveAndSoftRefreshDisplay();
+                let upd = {}; 
+                upd[field] = value;
+                updateInlineFieldOnCloud(id, upd);
+                renderGrid();
             }
         }
 
-        function deleteTask(id) {
-            if (activeTimerTaskId === id) stopGlobalTimerInstance();
-            tasks = tasks.filter(t => t.id !== id);
-            saveAndSoftRefreshDisplay();
+        function updateTaskDateInline(id, newDateValue) {
+            if(!newDateValue) return;
+            const task = tasks.find(t => t.id === id);
+            if(task) {
+                task.date = newDateValue;
+                task.day = getDayOfWeekFromDateString(newDateValue);
+                updateInlineFieldOnCloud(id, { task_date: newDateValue });
+                setTimeout(loadTasksFromCloud, 300);
+            }
         }
 
         function calculateAnalytics() {
@@ -319,18 +447,6 @@
             document.getElementById('day-non-prod-hours').innerText = `${dayNonProdMins.toFixed(1)} mins`;
             document.getElementById('day-efficiency-ratio').innerText = `${dayRatio}%`;
         }
-
-        function saveAndSoftRefreshDisplay() {
-            localStorage.setItem('myGridTasks', JSON.stringify(tasks));
-            renderGrid();
-        }
-
-        function loadInitialData() {
-            tasks = JSON.parse(localStorage.getItem('myGridTasks')) || [];
-            renderGrid();
-        }
-
-        loadInitialData();
     </script>
 </body>
 </html>
