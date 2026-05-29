@@ -122,9 +122,11 @@
     <script>
         // --- SECURE SUPABASE CONNECTIONS ---
         const SUPABASE_URL = "https://rajkebsrgepopfjlgyoc.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_-mdi6wUQFMQL_C5qe6p1sw_MIUYgg-3"; // Your verified key string
+        // Ensure you paste your absolute full, long publishable key string inside the quotes below!
+        const SUPABASE_KEY = "sb_publishable_-mdi6wUQFmQL_C5qe6p1sw_MIUYg..."; 
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // RENAMED from 'supabase' to 'supabaseClient' to fix the naming collision
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let tasks = [];
         let activeTimerTaskId = null; 
@@ -184,7 +186,7 @@
             const selectedWeek = document.getElementById('week-filter-picker').value;
             const boundaries = getStartAndEndOfWeekFromWeekString(selectedWeek);
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('tasks')
                 .select('*')
                 .gte('task_date', boundaries.start)
@@ -221,7 +223,7 @@
 
             if (!title || !task_date) return alert('Provide task title and select a date.');
 
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('tasks')
                 .insert([{ 
                     title, 
@@ -242,7 +244,7 @@
         }
 
         async function updateInlineFieldOnCloud(id, updateObj) {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('tasks')
                 .update(updateObj)
                 .eq('id', id);
@@ -252,7 +254,7 @@
         async function deleteTask(id) {
             if (activeTimerTaskId === id) stopGlobalTimerInstance();
             
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('tasks')
                 .delete()
                 .eq('id', id);
@@ -260,7 +262,7 @@
             if (error) return alert("Could not remove row from database.");
             loadTasksFromCloud();
         }
-
+        
         // --- APPLICATION UTILITIES ---
         function playPomodoroChime() {
             try {
