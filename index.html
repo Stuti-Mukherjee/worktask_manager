@@ -5,320 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work-Task Manager & Analytics Hub</title>
     
+    <link rel="stylesheet" href="Style.css">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        :root {
-            --purple-primary: #6C5CE7;
-            --purple-hover: #5B4BC4;
-            --purple-btn: #7F56D9;
-            --bg-light: #F9FAFB;
-            --border-color: #E5E7EB;
-            --text-main: #1F2937;
-            --text-muted: #4B5563;
-            
-            /* Modern Pastel Colors matching original framework */
-            --pastel-ready: #FFEAA7;
-            --pastel-progress: #55EFC4;
-            --pastel-stuck: #FF7675;
-            --pastel-done: #81ECEC;
-
-            --blue-category: #74B9FF;
-            --pink-category: #A29BFE;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-light);
-            color: var(--text-main);
-            padding: 30px;
-        }
-
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-
-        .navigation-tabs {
-            display: flex;
-            gap: 10px;
-        }
-
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn:hover {
-            color: var(--purple-primary);
-        }
-
-        .tab-btn.active {
-            color: var(--purple-primary);
-            border-bottom-color: var(--purple-primary);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Forms Elements */
-        .creation-form-ribbon {
-            background: #FFF;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-
-        .creation-form-ribbon input, 
-        .creation-form-ribbon select {
-            padding: 10px 14px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            color: var(--text-main);
-            background-color: #FFF;
-        }
-
-        .creation-form-ribbon input[type="text"] { flex: 2; min-width: 200px; }
-        .creation-form-ribbon input[type="date"] { flex: 0.8; min-width: 140px; }
-        .creation-form-ribbon select { flex: 0.8; min-width: 130px; }
-        .creation-form-ribbon input[name="minutes"] { flex: 0.5; min-width: 80px; }
-
-        .primary-action-btn {
-            background-color: var(--purple-btn);
-            color: white;
-            font-weight: bold;
-            border: none;
-            padding: 11px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .primary-action-btn:hover {
-            background-color: var(--purple-hover);
-        }
-
-        /* Filtering Ribbons */
-        .filter-ribbon-container {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
-            background: #FFF;
-            padding: 15px 20px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .ribbon-label {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .filter-bubble {
-            background-color: #F3F4F6;
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: all 0.2s ease;
-        }
-
-        .filter-bubble:hover {
-            background-color: #E5E7EB;
-        }
-
-        .filter-bubble.active {
-            background-color: var(--purple-primary);
-            color: white;
-            border-color: var(--purple-primary);
-        }
-
-        /* Layout Grid and Table Elements */
-        .data-table-wrapper {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 14px;
-        }
-
-        th {
-            background-color: #F8FAFC;
-            color: #64748B;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 12px;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            letter-spacing: 0.5px;
-        }
-
-        td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-
-        tr:last-child td { border-bottom: none; }
-
-        /* Dynamic Status Elements mapping styles inline */
-        .status-select, .type-select {
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 13px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .status-ready { background-color: var(--pastel-ready); color: #7F6000; }
-        .status-progress { background-color: var(--pastel-progress); color: #006B4B; }
-        .status-waiting { background-color: var(--pastel-stuck); color: #7F0000; }
-        .status-done { background-color: var(--pastel-done); color: #007F7F; }
-
-        .type-productive { background-color: rgba(116, 185, 255, 0.2); color: #004B8F; }
-        .type-nonproductive { background-color: rgba(248, 131, 120, 0.2); color: #9F1239; }
-
-        .row-timer-btn {
-            background: #E0F2FE;
-            color: #0369A1;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-
-        .row-timer-btn.running {
-            background: #FEE2E2;
-            color: #991B1B;
-            animation: pulse-border 1.5s infinite ease-in-out;
-        }
-
-        @keyframes pulse-border {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
-        .inline-note-input {
-            width: 100%;
-            border: 1px dashed transparent;
-            background: transparent;
-            padding: 6px;
-            border-radius: 4px;
-            color: var(--text-muted);
-        }
-
-        .inline-note-input:focus {
-            border-color: var(--purple-primary);
-            background: #FFF;
-            outline: none;
-        }
-
-        .inline-input-day {
-            border: 1px solid transparent;
-            background: transparent;
-            padding: 4px;
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-        
-        .inline-input-day:focus {
-            border-color: var(--border-color);
-            background: #FFF;
-        }
-
-        .delete-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-
-        .delete-btn:hover { opacity: 1; }
-
-        /* Dashboard & Metrics Sheet */
-        .dashboard-section-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1E293B;
-            margin-bottom: 20px;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .metric-card {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-
-        .metric-value {
-            font-size: 32px;
-            font-weight: 800;
-            color: #0F172A;
-            margin-top: 10px;
-        }
-    </style>
 </head>
 <body>
 
@@ -332,7 +22,7 @@
     <div id="grid-view" class="tab-content active">
         <div class="creation-form-ribbon">
             <input type="text" id="task-title" placeholder="+ Add task title...">
-            <input type="date" id="task-date">
+            <input type="date" id="task-date" onchange="handleCalendarDateChange(this.value)">
             <select id="task-type">
                 <option value="productive">🚀 Productive</option>
                 <option value="non-productive">☕ Non-Productive</option>
@@ -347,14 +37,14 @@
             <input type="week" id="week-filter-picker" onchange="loadTasksFromCloud()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border-color);">
             
             <span class="ribbon-label" style="margin-left: 20px;">Filter Day:</span>
-            <button class="filter-bubble active" onclick="filterByDay('All')">All Tasks</button>
-            <button class="filter-bubble" onclick="filterByDay('Monday')">Mon</button>
-            <button class="filter-bubble" onclick="filterByDay('Tuesday')">Tue</button>
-            <button class="filter-bubble" onclick="filterByDay('Wednesday')">Wed</button>
-            <button class="filter-bubble" onclick="filterByDay('Thursday')">Thu</button>
-            <button class="filter-bubble" onclick="filterByDay('Friday')">Fri</button>
-            <button class="filter-bubble" onclick="filterByDay('Saturday')">Sat</button>
-            <button class="filter-bubble" onclick="filterByDay('Sunday')">Sun</button>
+            <button id="btn-filter-All" class="filter-bubble active" onclick="filterByDay('All')">All Tasks</button>
+            <button id="btn-filter-Monday" class="filter-bubble" onclick="filterByDay('Monday')">Mon</button>
+            <button id="btn-filter-Tuesday" class="filter-bubble" onclick="filterByDay('Tuesday')">Tue</button>
+            <button id="btn-filter-Wednesday" class="filter-bubble" onclick="filterByDay('Wednesday')">Wed</button>
+            <button id="btn-filter-Thursday" class="filter-bubble" onclick="filterByDay('Thursday')">Thu</button>
+            <button id="btn-filter-Friday" class="filter-bubble" onclick="filterByDay('Friday')">Fri</button>
+            <button id="btn-filter-Saturday" class="filter-bubble" onclick="filterByDay('Saturday')">Sat</button>
+            <button id="btn-filter-Sunday" class="filter-bubble" onclick="filterByDay('Sunday')">Sun</button>
         </div>
 
         <div class="data-table-wrapper">
@@ -444,10 +134,9 @@
         // --- SECURE SUPABASE CONNECTIONS ---
         const SUPABASE_URL = "https://rajkebsrgepopfjlgyoc.supabase.co";
         
-        // CRITICAL: Ensure you click the official dashboard copy button and paste your long string here!
+        // CRITICAL: Replace with your actual untruncated private key string
         const SUPABASE_KEY = "YOUR_FULLY_COPIED_UNTRUNCATED_KEY_HERE"; 
         
-        // Resolved global name declaration conflicts
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let tasks = [];
@@ -455,11 +144,9 @@
         let globalTimerInterval = null;
         let selectedDayFilter = 'All';
 
-        // Chart reference storage instances
         let weeklyPieChartInstance = null;
         let dailyBarChartInstance = null;
 
-        // Initialize defaults on viewport boot
         window.addEventListener('DOMContentLoaded', () => {
             const todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('task-date').value = todayStr;
@@ -469,10 +156,10 @@
             const todayDayWord = daysArr[new Date().getDay()];
             document.getElementById('analytics-day-select').value = todayDayWord;
 
+            handleCalendarDateChange(todayStr);
             loadTasksFromCloud();
         });
 
-        // Datetime string calculation helper strategies
         function getYYYYWeekString(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
@@ -486,6 +173,21 @@
             const parts = dateString.split('-');
             const d = new Date(parts[0], parts[1] - 1, parts[2]);
             return days[d.getDay()];
+        }
+
+        function handleCalendarDateChange(dateValue) {
+            if (!dateValue) return;
+            const targetDayWord = getDayOfWeekFromDateString(dateValue);
+            
+            const correspondingWeekStr = getYYYYWeekString(new Date(dateValue.split('-')[0], dateValue.split('-')[1] - 1, dateValue.split('-')[2]));
+            const currentWeekPickerVal = document.getElementById('week-filter-picker').value;
+            
+            if (correspondingWeekStr !== currentWeekPickerVal) {
+                document.getElementById('week-filter-picker').value = correspondingWeekStr;
+                loadTasksFromCloud();
+            }
+
+            filterByDay(targetDayWord);
         }
 
         function getStartAndEndOfWeekFromWeekString(weekStr) {
@@ -506,7 +208,6 @@
             return { start: startStr, end: endStr };
         }
 
-        // --- CLOUD CRUD CONTROLLERS ---
         async function loadTasksFromCloud() {
             stopGlobalTimerInstance();
             const selectedWeek = document.getElementById('week-filter-picker').value;
@@ -589,7 +290,6 @@
             loadTasksFromCloud();
         }
 
-        // --- APPLICATION UTILITIES ---
         function playPomodoroChime() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -610,17 +310,18 @@
             if(tabId === 'dashboard-view') { calculateAnalytics(); }
         }
 
-        // Fixed bubble highlight state matching labels
         function filterByDay(dayName) {
             selectedDayFilter = dayName;
+            
             document.querySelectorAll('.filter-bubble').forEach(btn => {
                 btn.classList.remove('active');
-                
-                const matchName = dayName === 'All' ? 'All Tasks' : dayName.substring(0,3);
-                if(btn.innerText.trim() === matchName || btn.innerText.trim() === dayName) {
-                    btn.classList.add('active');
-                }
             });
+            
+            const targetButton = document.getElementById(`btn-filter-${dayName}`);
+            if (targetButton) {
+                targetButton.classList.add('active');
+            }
+            
             renderGrid();
         }
 
@@ -738,7 +439,6 @@
             }
         }
 
-        // --- ANALYTICS ENGINE WITH COMPREHENSIVE CHART IMPLEMENTATION ---
         function calculateAnalytics() {
             let weeklyProdMins = 0;
             let weeklyNonProdMins = 0;
@@ -752,22 +452,24 @@
             let dailyNonProdDataset = [0, 0, 0, 0, 0, 0, 0];
 
             tasks.forEach(task => {
-                let currentMinutes = task.secondsElapsed ? (task.secondsElapsed / 60) : (task.minutes || 0);
-                let dayIndex = daysOfWeek.indexOf(task.day);
-                
-                if (task.type === 'productive') {
-                    weeklyProdMins += currentMinutes;
-                    if(dayIndex !== -1) dailyProdDataset[dayIndex] += currentMinutes;
-                } else if (task.type === 'non-productive') {
-                    weeklyNonProdMins += currentMinutes;
-                    if(dayIndex !== -1) dailyNonProdDataset[dayIndex] += currentMinutes;
-                }
-
-                if (task.day === targetDay) {
+                if (task.status === 'ready' || task.status === 'progress' || task.status === 'done') {
+                    let currentMinutes = task.secondsElapsed ? (task.secondsElapsed / 60) : (task.minutes || 0);
+                    let dayIndex = daysOfWeek.indexOf(task.day);
+                    
                     if (task.type === 'productive') {
-                        dayProdMins += currentMinutes;
+                        weeklyProdMins += currentMinutes;
+                        if(dayIndex !== -1) dailyProdDataset[dayIndex] += currentMinutes;
                     } else if (task.type === 'non-productive') {
-                        dayNonProdMins += currentMinutes;
+                        weeklyNonProdMins += currentMinutes;
+                        if(dayIndex !== -1) dailyNonProdDataset[dayIndex] += currentMinutes;
+                    }
+
+                    if (task.day === targetDay) {
+                        if (task.type === 'productive') {
+                            dayProdMins += currentMinutes;
+                        } else if (task.type === 'non-productive') {
+                            dayNonProdMins += currentMinutes;
+                        }
                     }
                 }
             });
@@ -790,7 +492,6 @@
         }
 
         function renderDataCharts(prodWeekly, nonProdWeekly, prodDaily, nonProdDaily) {
-            // 1. Doughnut Mix Chart
             const ctxPie = document.getElementById('weeklyPieChart');
             if (ctxPie) {
                 if (weeklyPieChartInstance) weeklyPieChartInstance.destroy();
@@ -812,7 +513,6 @@
                 });
             }
 
-            // 2. Daily Stacked Time Breakdown Bar Chart
             const ctxBar = document.getElementById('dailyBarChart');
             if (ctxBar) {
                 if (dailyBarChartInstance) dailyBarChartInstance.destroy();
