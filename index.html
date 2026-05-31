@@ -156,12 +156,18 @@
             loadTasksFromCloud();
         });
 
+        // FIXED SUNDAY-SAFE WEEK STRING ALGORITHM
         function getYYYYWeekString(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            return d.getUTCFullYear() + "-W" + weekNo.toString().padStart(2, '0');
+            let target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            let dayNr = (target.getDay() + 6) % 7; // Normalize so Monday = 0, Sunday = 6
+            target.setDate(target.getDate() - dayNr + 3); // Move to Thursday of current week
+            let firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+            }
+            let weekNo = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+            return target.getFullYear() + "-W" + weekNo.toString().padStart(2, '0');
         }
 
         function getDayOfWeekFromDateString(dateString) {
@@ -304,7 +310,6 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
-            // Highlight the tabs themselves cleanly
             if (tabId === 'grid-view') document.querySelectorAll('.tab-btn')[0].classList.add('active');
             if (tabId === 'dashboard-view') {
                 document.querySelectorAll('.tab-btn')[1].classList.add('active');
@@ -454,7 +459,6 @@
             let dailyNonProdDataset = [0, 0, 0, 0, 0, 0, 0];
 
             tasks.forEach(task => {
-                // Expanded calculation metrics to include tasks that are "Working on it" (ready) or "In Progress" (progress)
                 if (task.status === 'ready' || task.status === 'progress' || task.status === 'done') {
                     let currentMinutes = task.secondsElapsed ? (task.secondsElapsed / 60) : (task.minutes || 0);
                     let dayIndex = daysOfWeek.indexOf(task.day);
